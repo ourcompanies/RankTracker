@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { RankItem, CheckIn, PageRank, Priority, SEOAction } from './types';
-import { getItems, saveItems, getCheckIns, saveCheckIns } from './utils/storage.ts';
-import { RankBadge } from './components/RankBadge.tsx';
-import { COLORS, DEFAULT_CHECKLIST } from './constants.tsx';
+import { RankItem, CheckIn, PageRank, Priority } from './types';
+import { getItems, saveItems, getCheckIns, saveCheckIns } from './utils/storage';
+import { RankBadge } from './components/RankBadge';
+import { COLORS, DEFAULT_CHECKLIST } from './constants';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 type View = 'dashboard' | 'form' | 'details' | 'export';
@@ -14,7 +14,6 @@ export default function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
-  // Filter & Search states
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterProject, setFilterProject] = useState<string>('all');
@@ -55,7 +54,6 @@ export default function App() {
   const stats = useMemo(() => {
     const now = Date.now();
     const sevenDaysAgo = now - 7 * 86400000;
-    
     let risers = 0;
     let fallers = 0;
 
@@ -67,7 +65,6 @@ export default function App() {
       if (itemCheckins.length >= 2) {
         const latest = itemCheckins[0];
         const previous = itemCheckins.find(c => new Date(c.date).getTime() <= sevenDaysAgo) || itemCheckins[1];
-        
         if (latest.page < previous.page) risers++;
         if (latest.page > previous.page) fallers++;
       }
@@ -149,7 +146,7 @@ export default function App() {
   };
 
   const exportCSV = () => {
-    const headers = ['Projeto', 'Palavra-chave', 'URL', 'Página Atual', 'Última Atualização', 'Prioridade'];
+    const headers = ['Projeto', 'Palavra-chave', 'URL', 'Pagina Atual', 'Ultima Atualizacao', 'Prioridade'];
     const rows = filteredItems.map(item => [
       item.project,
       item.keyword,
@@ -158,15 +155,11 @@ export default function App() {
       new Date(item.lastUpdatedAt).toLocaleDateString(),
       item.priority
     ]);
-    
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n"
-      + rows.map(e => e.join(",")).join("\n");
-
+    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `rank_tracker_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `rank_tracker_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -205,22 +198,14 @@ export default function App() {
             />
           </div>
           <div className="flex gap-2">
-            <select 
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
+            <select className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
               <option value="all">Todos Status</option>
               <option value="1">Página 1</option>
               <option value="2">Página 2</option>
               <option value="3">Página 3</option>
               <option value="4">Página 4+</option>
             </select>
-            <select 
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
-              value={filterProject}
-              onChange={(e) => setFilterProject(e.target.value)}
-            >
+            <select className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white" value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
               <option value="all">Todos Projetos</option>
               {projects.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
@@ -241,82 +226,42 @@ export default function App() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredItems.map(item => {
-               const itemCheckins = checkins
-               .filter(c => c.itemId === item.id)
-               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-               
+               const itemCheckins = checkins.filter(c => c.itemId === item.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                let variation = "Igual";
                let varColor = "text-slate-400";
-               
                if (itemCheckins.length >= 2) {
                  const diff = itemCheckins[1].page - itemCheckins[0].page;
                  if (diff > 0) { variation = `Subiu ${diff}`; varColor = "text-green-600 font-bold"; }
                  else if (diff < 0) { variation = `Caiu ${Math.abs(diff)}`; varColor = "text-red-600 font-bold"; }
                }
-
                const isCritical = item.currentPage === 4 && (Date.now() - new Date(item.lastUpdatedAt).getTime() > 14 * 86400000);
-               let hasTraction = false;
-               if (itemCheckins.length >= 2) {
-                const diff = itemCheckins[1].page - itemCheckins[0].page;
-                hasTraction = diff >= 2 && (Date.now() - new Date(itemCheckins[0].date).getTime() < 7 * 86400000);
-               }
-
                return (
                 <tr key={item.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => { setSelectedItemId(item.id); setCurrentView('details'); }}>
-                  <td className="px-6 py-4">
-                    <RankBadge page={item.currentPage} size="sm" />
-                  </td>
+                  <td className="px-6 py-4 text-center"><RankBadge page={item.currentPage} size="sm" /></td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="text-xs text-slate-400 font-medium">{item.project}</span>
                       <span className="font-semibold text-slate-700">{item.keyword}</span>
-                      {isCritical && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded w-fit mt-1">⚠️ CRÍTICO (+14d Pág 4)</span>}
-                      {hasTraction && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded w-fit mt-1">🚀 GANHANDO TRAÇÃO</span>}
+                      {isCritical && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded w-fit mt-1">⚠️ CRÍTICO (+14d)</span>}
                     </div>
                   </td>
                   <td className="px-6 py-4 hidden md:table-cell">
-                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline text-sm truncate max-w-xs block" onClick={(e) => e.stopPropagation()}>
-                      {item.url.replace('https://', '')}
-                    </a>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline text-sm truncate max-w-xs block" onClick={(e) => e.stopPropagation()}>{item.url}</a>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-sm ${varColor}`}>{variation}</span>
-                  </td>
+                  <td className="px-6 py-4"><span className={`text-sm ${varColor}`}>{variation}</span></td>
                   <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setSelectedItemId(item.id); setCurrentView('details'); }}
-                      className="text-slate-400 hover:text-indigo-600"
-                    >
-                      Ver Detalhes →
-                    </button>
+                    <button className="text-slate-400 hover:text-indigo-600">Ver Detalhes →</button>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        {filteredItems.length === 0 && (
-          <div className="p-10 text-center text-slate-500">
-            Nenhum resultado encontrado.
-          </div>
-        )}
       </div>
 
       <div className="fixed bottom-6 right-6 flex flex-col gap-3">
-        <button 
-          onClick={() => setCurrentView('export')}
-          className="bg-slate-800 text-white p-4 rounded-full shadow-lg hover:bg-slate-700 transition-colors flex items-center justify-center w-14 h-14"
-          title="Exportar dados"
-        >
-          📤
-        </button>
-        <button 
-          onClick={() => setCurrentView('form')}
-          className="bg-indigo-600 text-white p-4 rounded-full shadow-xl hover:bg-indigo-700 transition-colors flex items-center justify-center w-14 h-14"
-          title="Adicionar Novo"
-        >
-          <span className="text-2xl">+</span>
-        </button>
+        <button onClick={() => setCurrentView('export')} className="bg-slate-800 text-white p-4 rounded-full shadow-lg hover:bg-slate-700 transition-colors flex items-center justify-center w-14 h-14">📤</button>
+        <button onClick={() => setCurrentView('form')} className="bg-indigo-600 text-white p-4 rounded-full shadow-xl hover:bg-indigo-700 transition-colors flex items-center justify-center w-14 h-14"><span className="text-2xl">+</span></button>
       </div>
     </div>
   );
@@ -328,9 +273,7 @@ export default function App() {
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Projeto</label>
           <input list="project-list" name="project" required className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ex: Arte Clean" />
-          <datalist id="project-list">
-            {projects.map(p => <option key={p} value={p} />)}
-          </datalist>
+          <datalist id="project-list">{projects.map(p => <option key={p} value={p} />)}</datalist>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Palavra-chave</label>
@@ -360,12 +303,12 @@ export default function App() {
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Observações (Opcional)</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Observações</label>
           <textarea name="notes" className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 h-24"></textarea>
         </div>
         <div className="flex gap-4 pt-4">
-          <button type="submit" className="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-colors">Salvar</button>
-          <button type="button" onClick={() => setCurrentView('dashboard')} className="px-6 py-3 border border-slate-200 rounded-xl hover:bg-slate-50">Cancelar</button>
+          <button type="submit" className="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700">Salvar</button>
+          <button type="button" onClick={() => setCurrentView('dashboard')} className="px-6 py-3 border border-slate-200 rounded-xl">Cancelar</button>
         </div>
       </form>
     </div>
@@ -374,36 +317,23 @@ export default function App() {
   const ItemDetails = () => {
     const item = items.find(i => i.id === selectedItemId);
     if (!item) return null;
-
-    const itemCheckins = checkins
-      .filter(c => c.itemId === item.id)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    const chartData = itemCheckins.map(c => ({
-      date: new Date(c.date).toLocaleDateString(),
-      page: c.page,
-    }));
+    const itemCheckins = checkins.filter(c => c.itemId === item.id).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const chartData = itemCheckins.map(c => ({ date: new Date(c.date).toLocaleDateString(), page: c.page }));
 
     return (
       <div className="space-y-6 max-w-5xl mx-auto pb-20">
-        <button onClick={() => setCurrentView('dashboard')} className="text-indigo-600 font-medium mb-4 flex items-center">
-          ← Voltar para Dashboard
-        </button>
-        
+        <button onClick={() => setCurrentView('dashboard')} className="text-indigo-600 font-medium mb-4">← Voltar</button>
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50 border-b border-slate-200">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{item.keyword}</h1>
-              <a href={item.url} target="_blank" className="text-indigo-600 text-sm break-all">{item.url}</a>
-              <div className="flex items-center gap-2 mt-2">
+              <h1 className="text-2xl md:text-3xl font-bold">{item.keyword}</h1>
+              <p className="text-indigo-600 text-sm">{item.url}</p>
+              <div className="flex gap-2 mt-2">
                 <span className="text-xs font-bold px-2 py-1 rounded bg-indigo-100 text-indigo-700 uppercase">{item.project}</span>
                 <span className="text-xs font-bold px-2 py-1 rounded bg-slate-200 text-slate-600 uppercase">PRIORIDADE: {item.priority}</span>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <RankBadge page={item.currentPage} size="lg" />
-              <p className="text-xs text-slate-400">Atualizado: {new Date(item.lastUpdatedAt).toLocaleString()}</p>
-            </div>
+            <RankBadge page={item.currentPage} size="lg" />
           </div>
 
           <div className="p-6 md:p-8 grid md:grid-cols-2 gap-8">
@@ -416,81 +346,34 @@ export default function App() {
                     <XAxis dataKey="date" fontSize={10} />
                     <YAxis reversed domain={[1, 4]} ticks={[1, 2, 3, 4]} fontSize={10} />
                     <Tooltip />
-                    <Line type="monotone" dataKey="page" stroke="#4f46e5" strokeWidth={3} dot={{ r: 6 }} activeDot={{ r: 8 }} />
+                    <Line type="monotone" dataKey="page" stroke="#4f46e5" strokeWidth={3} dot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-
-              <div>
-                <h3 className="text-lg font-bold mb-4">Check-ins</h3>
-                <div className="space-y-3">
-                  {itemCheckins.slice().reverse().map(c => (
-                    <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50">
-                      <div>
-                        <p className="text-sm font-bold">{new Date(c.date).toLocaleDateString()} {new Date(c.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                        {c.notes && <p className="text-xs text-slate-500 mt-1 italic">"{c.notes}"</p>}
-                      </div>
-                      <RankBadge page={c.page} size="sm" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-4 p-6 bg-indigo-50 rounded-xl border border-indigo-100">
-                <h3 className="font-bold text-indigo-900 mb-3">Novo Check-in</h3>
+              <div className="pt-4 p-6 bg-indigo-50 rounded-xl">
+                <h3 className="font-bold mb-3">Novo Check-in</h3>
                 <div className="flex flex-wrap gap-2">
                   {[1, 2, 3, 4].map(p => (
-                    <button 
-                      key={p} 
-                      onClick={() => handleNewCheckIn(item.id, p as PageRank)}
-                      className={`px-4 py-2 rounded-lg font-bold transition-all shadow-sm ${item.currentPage === p ? 'ring-2 ring-indigo-600 opacity-100' : 'opacity-80'}`}
-                      style={{ backgroundColor: (COLORS as any)[`P${p}`], color: 'white' }}
-                    >
+                    <button key={p} onClick={() => handleNewCheckIn(item.id, p as PageRank)} className={`px-4 py-2 rounded-lg font-bold text-white shadow-sm`} style={{ backgroundColor: (COLORS as any)[`P${p}`] }}>
                       Pág {p === 4 ? '4+' : p}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
-
             <div className="space-y-6">
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                <h3 className="text-lg font-bold mb-4">✅ Checklist</h3>
+                <h3 className="text-lg font-bold mb-4">✅ Checklist SEO</h3>
                 <div className="space-y-3">
                   {item.checklist.map(action => (
-                    <label key={action.id} className="flex items-center gap-3 cursor-pointer group">
-                      <input 
-                        type="checkbox" 
-                        checked={action.completed}
-                        onChange={() => toggleChecklist(item.id, action.id)}
-                        className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <div className="flex flex-col">
-                        <span className={`text-sm ${action.completed ? 'line-through text-slate-400' : 'text-slate-700 font-medium'}`}>
-                          {action.label}
-                        </span>
-                      </div>
+                    <label key={action.id} className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" checked={action.completed} onChange={() => toggleChecklist(item.id, action.id)} className="w-5 h-5 rounded border-slate-300 text-indigo-600" />
+                      <span className={`text-sm ${action.completed ? 'line-through text-slate-400' : 'text-slate-700 font-medium'}`}>{action.label}</span>
                     </label>
                   ))}
                 </div>
               </div>
-
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                <h3 className="text-lg font-bold mb-4">📝 Notas</h3>
-                <textarea 
-                  className="w-full h-32 p-3 text-sm border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Mudanças feitas..."
-                  defaultValue={item.testNotes}
-                  onBlur={(e) => setItems(items.map(i => i.id === item.id ? { ...i, testNotes: e.target.value } : i))}
-                />
-              </div>
-
-              <button 
-                onClick={() => handleDeleteItem(item.id)}
-                className="w-full py-3 text-red-600 font-medium hover:bg-red-50 rounded-xl border border-red-100"
-              >
-                Excluir
-              </button>
+              <button onClick={() => handleDeleteItem(item.id)} className="w-full py-3 text-red-600 font-medium hover:bg-red-50 rounded-xl border border-red-100">Excluir</button>
             </div>
           </div>
         </div>
@@ -498,37 +381,25 @@ export default function App() {
     );
   };
 
-  const ExportView = () => (
-    <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
-      <h2 className="text-2xl font-bold">Exportar</h2>
-      <button 
-        onClick={exportCSV}
-        className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-      >
-        📥 Baixar CSV
-      </button>
-      <button onClick={() => setCurrentView('dashboard')} className="w-full py-3 border border-slate-200 rounded-xl hover:bg-slate-50">
-        Voltar
-      </button>
-    </div>
-  );
-
   return (
     <div className="min-h-screen">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between" onClick={() => setCurrentView('dashboard')}>
+          <div className="flex items-center gap-2 cursor-pointer">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">R</div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Rank Tracker</h1>
+            <h1 className="text-xl font-bold text-slate-900">Rank Tracker</h1>
           </div>
         </div>
       </header>
-
       <main className="max-w-7xl mx-auto px-4 py-8">
         {currentView === 'dashboard' && <Dashboard />}
         {currentView === 'form' && <ItemForm />}
         {currentView === 'details' && <ItemDetails />}
-        {currentView === 'export' && <ExportView />}
+        {currentView === 'export' && <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+          <h2 className="text-2xl font-bold">Exportar Dados</h2>
+          <button onClick={exportCSV} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl">Baixar CSV</button>
+          <button onClick={() => setCurrentView('dashboard')} className="w-full py-3 border border-slate-200 rounded-xl">Voltar</button>
+        </div>}
       </main>
     </div>
   );
